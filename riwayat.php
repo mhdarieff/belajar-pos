@@ -101,7 +101,7 @@ $query_riwayat = mysqli_query($koneksi, "SELECT * FROM transaksi ORDER BY id_tra
                 <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
                     <div>
                         <h2 class="text-2xl font-bold text-gray-900 tracking-tight">Data Transaksi</h2>
-                        <p class="text-gray-500 font-medium mt-1 text-sm">Klik pada baris transaksi di bawah untuk melihat rincian pesanan.</p>
+                        <p class="text-gray-500 font-medium mt-1 text-sm">Kelola dan pantau seluruh riwayat pembayaran yang masuk.</p>
                     </div>
                 </div>
 
@@ -122,7 +122,7 @@ $query_riwayat = mysqli_query($koneksi, "SELECT * FROM transaksi ORDER BY id_tra
                                 <?php if (mysqli_num_rows($query_riwayat) > 0) : ?>
                                     <?php while ($row = mysqli_fetch_assoc($query_riwayat)) : ?>
                                     
-                                    <!-- BARIS UTAMA (Bisa diklik) -->
+                                    <!-- BARIS UTAMA -->
                                     <tr class="hover:bg-blue-50/40 transition-colors group cursor-pointer" onclick="toggleDetail('<?= $row['id_transaksi'] ?>')">
                                         <td class="p-5 whitespace-nowrap">
                                             <span class="font-bold text-gray-900">#TRX-<?= str_pad($row['id_transaksi'], 5, '0', STR_PAD_LEFT) ?></span>
@@ -142,9 +142,25 @@ $query_riwayat = mysqli_query($koneksi, "SELECT * FROM transaksi ORDER BY id_tra
                                         <td class="p-5 whitespace-nowrap text-right">
                                             <span class="font-black text-gray-900 tracking-tight">Rp <?= number_format($row['total_belanja'], 0, ',', '.') ?></span>
                                         </td>
+                                        
+                                        <!-- KOLOM AKSI (Diperbarui dengan Tombol Hapus) -->
                                         <td class="p-5 whitespace-nowrap text-center">
-                                            <div id="icon-<?= $row['id_transaksi'] ?>" class="inline-flex items-center justify-center p-2 rounded-lg bg-gray-100 text-gray-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-all duration-300">
-                                                <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                                            <div class="flex items-center justify-center gap-2">
+                                                
+                                                <!-- TOMBOL HAPUS (Warna Merah Transparan) -->
+                                                <!-- event.stopPropagation() mencegah Laci terbuka saat tombol hapus diklik -->
+                                                <a href="proses/hapus_riwayat.php?id=<?= $row['id_transaksi'] ?>" 
+                                                   onclick="event.stopPropagation(); return confirm('Yakin ingin menghapus permanen transaksi #TRX-<?= str_pad($row['id_transaksi'], 5, '0', STR_PAD_LEFT) ?>?');" 
+                                                   class="inline-flex items-center justify-center p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300"
+                                                   title="Hapus Transaksi">
+                                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                                </a>
+                                                
+                                                <!-- TOMBOL LACI BUKA TUTUP -->
+                                                <div id="icon-<?= $row['id_transaksi'] ?>" class="inline-flex items-center justify-center p-2 rounded-lg bg-gray-100 text-gray-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-all duration-300">
+                                                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                                                </div>
+                                                
                                             </div>
                                         </td>
                                     </tr>
@@ -159,10 +175,7 @@ $query_riwayat = mysqli_query($koneksi, "SELECT * FROM transaksi ORDER BY id_tra
                                                     <?php
                                                     $id_trx = $row['id_transaksi'];
                                                     $ada_detail = false;
-                                                    $query_detail = null;
-
-                                                    // TRY-CATCH: Pelindung Anti-Crash!
-                                                    // Jika tabel detail_transaksi belum ada, sistem TIDAK AKAN ERROR, melainkan langsung menampilkan pesan kosong.
+                                                    
                                                     try {
                                                         $query_detail = mysqli_query($koneksi, "SELECT * FROM detail_transaksi WHERE id_transaksi = '$id_trx'");
                                                         if ($query_detail && mysqli_num_rows($query_detail) > 0) {
@@ -204,7 +217,6 @@ $query_riwayat = mysqli_query($koneksi, "SELECT * FROM transaksi ORDER BY id_tra
                                                                 <i data-lucide="file-question" class="w-6 h-6 text-gray-400"></i>
                                                             </div>
                                                             <p class="text-gray-900 font-semibold text-sm">Belum ada rincian yang tercatat.</p>
-                                                            <p class="text-gray-500 text-xs mt-1">Selesaikan pembuatan tabel Database dan update file Struk untuk memunculkannya.</p>
                                                         </div>
                                                     <?php endif; ?>
                                                 </div>
@@ -215,6 +227,11 @@ $query_riwayat = mysqli_query($koneksi, "SELECT * FROM transaksi ORDER BY id_tra
                                 <?php else : ?>
                                     <tr>
                                         <td colspan="5" class="p-16 text-center">
+                                            <div class="flex justify-center mb-4">
+                                                <div class="bg-gray-50 p-4 rounded-full">
+                                                    <i data-lucide="receipt" class="w-10 h-10 text-gray-300"></i>
+                                                </div>
+                                            </div>
                                             <p class="text-gray-900 font-bold mb-1">Belum ada transaksi</p>
                                         </td>
                                     </tr>
@@ -230,21 +247,17 @@ $query_riwayat = mysqli_query($koneksi, "SELECT * FROM transaksi ORDER BY id_tra
     </main>
 
     <script>
-        // Pastikan ikon diload dulu
         lucide.createIcons();
 
-        // LOGIKA BUKA LACI
         function toggleDetail(id) {
             const detailRow = document.getElementById('detail-' + id);
             const iconWrapper = document.getElementById('icon-' + id);
             
             if (detailRow.classList.contains('hidden')) {
-                // BUKA LACI
                 detailRow.classList.remove('hidden');
                 iconWrapper.classList.add('rotate-180', 'bg-blue-100', 'text-blue-600');
                 iconWrapper.classList.remove('bg-gray-100', 'text-gray-500');
             } else {
-                // TUTUP LACI
                 detailRow.classList.add('hidden');
                 iconWrapper.classList.remove('rotate-180', 'bg-blue-100', 'text-blue-600');
                 iconWrapper.classList.add('bg-gray-100', 'text-gray-500');
